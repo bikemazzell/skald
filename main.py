@@ -9,7 +9,7 @@ def display_startup_message():
     version = config.get("version", "0.1")
     print(f"""
 ╔═══════════════════════════════════╗
-║ 👄   Skald (STT Transcriber)   🎙️  ║
+║ 👄   Skald (STT Transcriber)   🎙️ ║
 ║      Created by @shoewind1997     ║
 ║ 👂     Version {version:<6}          📝 ║
 ╚═══════════════════════════════════╝

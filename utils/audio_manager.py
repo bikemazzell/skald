@@ -1,12 +1,10 @@
 import sounddevice as sd
 import numpy as np
-import platform
 import time
 
 class AudioManager:
     @staticmethod
     def initialize_audio():
-        """Initialize and test audio device"""
         try:
             devices = sd.query_devices()
             default_input = sd.query_devices(kind='input')
@@ -18,19 +16,17 @@ class AudioManager:
 
     @staticmethod
     def play_start_tone(config):
-        """Play a short beep to indicate recording is about to start"""
         tone_config = config["audio"]["start_tone"]
         if not tone_config.get("enabled", False):
             return
 
         try:
-            # Generate a short sine wave
             sample_rate = config["audio"]["sample_rate"]
             t = np.linspace(0, tone_config["duration"]/1000, 
                           int(sample_rate * tone_config["duration"]/1000))
             tone = np.sin(2 * np.pi * tone_config["frequency"] * t)
             
-            # Apply fade in/out to prevent clicking
+            # Prevent clicking with fade in/out
             fade_ms = 5
             fade_len = int(fade_ms * sample_rate / 1000)
             fade_in = np.linspace(0, 1, fade_len)
@@ -38,9 +34,8 @@ class AudioManager:
             tone[:fade_len] *= fade_in
             tone[-fade_len:] *= fade_out
 
-            # Play the tone
             sd.play(tone, sample_rate, blocking=True)
-            time.sleep(0.05)  # Small delay to ensure tone is finished
+            time.sleep(0.05)  # Ensure tone is finished
 
         except Exception as e:
             print(f"Warning: Could not play start tone: {e}") 

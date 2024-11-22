@@ -182,5 +182,3 @@ class AudioTranscriber:
         elif torch.backends.mps.is_available():  # For Apple M1/M2
             return "mps"
         return "cpu"
-
-    # ... rest of the AudioTranscriber class methods ... 

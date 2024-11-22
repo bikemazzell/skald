@@ -23,7 +23,6 @@ class ConfigValidator:
                 if field not in config[section]:
                     raise ValueError(f"Missing field '{field}' in section '{section}'")
         
-        # Validate specific values
         if config["audio"]["sample_rate"] not in [16000, 32000, 44100, 48000]:
             raise ValueError("Sample rate must be 16000, 32000, 44100, or 48000")
         
@@ -43,7 +42,6 @@ class ConfigValidator:
         if config["audio"]["buffer_size_multiplier"] <= 0:
             raise ValueError("buffer_size_multiplier must be positive")
         
-        # Validate start_tone settings
         if "start_tone" in config["audio"]:
             tone_config = config["audio"]["start_tone"]
             if not isinstance(tone_config, dict):
