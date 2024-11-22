@@ -92,7 +92,7 @@ Example configuration:
 | base | 74M | Basic transcription | ⚡⚡⚡⚡ | ⭐⭐ |
 | small | 244M | Balanced performance | ⚡⚡⚡ | ⭐⭐⭐ |
 | medium | 769M | Better accuracy | ⚡⚡ | ⭐⭐⭐⭐ |
-| large-v3 | 1550M | Best accuracy | ⚡ | ⭐⭐⭐⭐⭐ |
+| large | 1550M | Best accuracy | ⚡ | ⭐⭐⭐⭐⭐ |
 
 ## Usage
 
