@@ -1,5 +1,5 @@
 {
-    "version": "0.1",
+    "version": "1.0",
     "audio": {
         "sample_rate": 16000,
         "silence_threshold": 0.01,
@@ -11,21 +11,33 @@
         "start_tone": {
             "enabled": true,
             "frequency": 440,
-            "duration": 150
+            "duration": 150,
+            "fade_ms": 5
         }
     },
     "processing": {
         "shutdown_timeout": 30,
-        "event_wait_timeout": 0.1
+        "event_wait_timeout": 0.1,
+        "auto_paste": true
     },
     "whisper": {
         "model": "large",
         "language": "en",
         "task": "transcribe",
-        "device": "auto"
+        "device": "auto",
+        "beam_size": 5
     },
     "debug": {
         "print_status": true,
         "print_transcriptions": true
+    },
+    "server": {
+        "socket_path": "/tmp/skald.sock",
+        "socket_timeout": 1.0
+    },
+    "compute": {
+        "cuda": "float16",
+        "mps": "float32",
+        "cpu": "int8"
     }
 }

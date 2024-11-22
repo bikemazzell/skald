@@ -5,15 +5,15 @@ import os
 class ConfigLoader:
     @staticmethod
     def load_config(config_filename="config.json"):
-        script_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent
-        config_path = script_dir / config_filename
+        project_root = os.environ.get('SKALD_ROOT')
+        if not project_root:
+            raise RuntimeError("SKALD_ROOT environment variable not set")
+            
+        config_path = Path(project_root) / config_filename
         
-        if not config_path.is_file():
-            raise FileNotFoundError(f"Config file not found at {config_path}")
-        
-        if not str(config_path).endswith('.json'):
-            raise ValueError("Config file must be a JSON file")
-        
+        if not config_path.exists():
+            raise FileNotFoundError(f"Config file not found: {config_path}")
+            
         try:
             with open(config_path, 'r') as f:
                 return json.load(f)

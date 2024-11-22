@@ -1,16 +1,29 @@
 from setuptools import setup, find_packages
+import json
+import os
+
+# Read version from config.json
+config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+try:
+    with open(config_path) as f:
+        config = json.load(f)
+        version = config.get('version', '1.0')
+        # Validate version format
+        if not str(version).replace(".", "").isdigit():
+            version = '1.0'
+except (FileNotFoundError, json.JSONDecodeError):
+    version = '1.0'
 
 setup(
     name="skald",
-    version="0.1",
+    version=version,
     packages=find_packages(),
+    scripts=['skald-server', 'skald-client'],
     install_requires=[
-        'faster-whisper>=0.10.0',
-        'torch>=2.0.0',
-        'numpy>=1.20.0',
-        'pyperclip>=1.8.2',
-        'scipy>=1.7.0',
-        'sounddevice>=0.4.6'
-    ],
-    python_requires='>=3.8',
+        'numpy',
+        'sounddevice',
+        'faster-whisper',
+        'pyperclip',
+        'torch'
+    ]
 ) 

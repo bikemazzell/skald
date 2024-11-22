@@ -1,4 +1,3 @@
-```
 ╔═╗╦╔═╔═╗╦  ╔╦╗
 ╚═╗╠╩╗╠═╣║   ║║
 ╚═╝╩ ╩╩ ╩╩═╝═╩╝
@@ -24,11 +23,13 @@ This makes Skald ideal for transcribing sensitive or confidential information, a
 ```bash
 git clone https://github.com/bikemazzell/skald.git
 cd skald
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
-pip install -r requirements.txt
+conda create -n skald python=3.11  # or your preferred Python version
+conda activate skald
+conda install sounddevice pyperclip numpy scipy
+conda install pytorch torchvision torchaudio -c pytorch
+pip install faster-whisper  # not available in conda
 cp config.json.example config.json
-python main.py
+chmod +x skald-server skald-client  # Make scripts executable
 ```
 
 ## Features
@@ -43,6 +44,23 @@ python main.py
 - 🎯 Optimized for both CPU and GPU processing
 
 ## System Requirements
+
+### Environment Setup
+- Python 3.8 or higher
+- Conda environment recommended for dependency management
+- Server must run in environment with all dependencies
+- Client can run in any Python environment
+
+### Server Dependencies
+- faster-whisper
+- sounddevice
+- pyperclip
+- torch
+- numpy
+- scipy
+
+### Client Dependencies
+- Standard Python libraries only (no special requirements)
 
 ### Minimum Requirements
 - Python 3.8 or higher
@@ -142,18 +160,29 @@ Example configuration:
         "start_tone": {
             "enabled": true,          // Play a tone when recording starts
             "frequency": 440,         // Tone frequency in Hz (20-20000)
-            "duration": 150           // Tone duration in milliseconds (50-1000)
+            "duration": 150,          // Tone duration in milliseconds (50-1000)
+            "fade_ms": 5             // Fade in/out duration in milliseconds (0-100)
         }
     },
     "processing": {
         "shutdown_timeout": 30,       // Maximum seconds to wait for processing to complete
-        "event_wait_timeout": 0.1     // Timeout for event checking in seconds
+        "event_wait_timeout": 0.1,    // Timeout for event checking in seconds
+        "auto_paste": true           // Automatically paste after copying to clipboard
     },
     "whisper": {
         "model": "large",            // Whisper model size (tiny, base, small, medium, large)
         "language": "en",            // Target language code
         "task": "transcribe",        // Task type (transcribe or translate)
-        "device": "auto"             // Computing device (auto, cpu, cuda, mps)
+        "beam_size": 5               // Controls the breadth of the beam search (higher values = more accurate but slower)
+    },
+    "compute": {
+        "cuda": "float16",           // Compute type for CUDA GPU (float16, float32, int8)
+        "mps": "float32",            // Compute type for Apple Silicon GPU
+        "cpu": "int8"                // Compute type for CPU
+    },
+    "server": {
+        "socket_path": "/tmp/skald.sock",  // Unix socket path for client-server communication
+        "socket_timeout": 1.0              // Socket timeout in seconds
     },
     "debug": {
         "print_status": true,        // Print audio device status messages
@@ -175,11 +204,26 @@ Example configuration:
 #### Processing Settings
 - `shutdown_timeout`: Ensures graceful shutdown with enough time for processing
 - `event_wait_timeout`: Controls responsiveness of the recording loop
+- `auto_paste`: When true, automatically pastes text after copying to clipboard
 
 #### Whisper Settings
 - `model`: Larger models are more accurate but slower and use more memory
 - `language`: Supports multiple languages (see Whisper documentation)
 - `device`: Auto-detects best available computing device
+- `beam_size`: Controls the breadth of the beam search (higher values = more accurate but slower)
+
+#### Compute Settings
+- `compute`: Specifies precision for different compute devices
+  - `cuda`: GPU compute type (typically float16 for best performance)
+  - `mps`: Apple Silicon compute type (typically float32)
+  - `cpu`: CPU compute type (typically int8 for efficiency)
+
+#### Server Settings
+- `socket_path`: Location of Unix socket for client-server communication
+- `socket_timeout`: Timeout for socket operations in seconds
+
+#### Start Tone Settings
+- `fade_ms`: Duration of fade in/out effect for start tone (0-100ms)
 
 #### Debug Settings
 Control verbosity of output during operation
@@ -196,18 +240,49 @@ Control verbosity of output during operation
 
 ## Usage
 
-1. Start the application:
+1. Start the server (keep it running in background):
 ```bash
-python main.py
+conda activate skald  # Ensure you're in the right environment
+./skald-server
 ```
 
-2. When you hear the start tone (if enabled), begin speaking into your microphone. Skald will listen until:
-   - You press Ctrl+C
-   - A configurable silence timeout is reached (default: 2 seconds)
+2. In another terminal, use the client to control recording:
+```bash
+./skald-client start  # Begin recording
+./skald-client stop   # Stop recording manually
+```
 
-3. The transcribed text will automatically be copied to your clipboard
+Recording will automatically stop when either:
+- Silence is detected for `silence_duration` seconds (default: 3s)
+- Maximum duration is reached (`max_duration` seconds, default: 300s)
+- Manual stop command is sent (`./skald-client stop`)
 
-Note: The start tone can be enabled/disabled and customized in the config.json file. When enabled, it provides an audio cue that the application is ready to record.
+The transcribed text will automatically be:
+1. Copied to your clipboard
+2. Pasted immediately (if auto_paste is enabled in config)
+
+#### Auto-Stop Settings
+```json
+{
+    "audio": {
+        "silence_threshold": 0.01,    // Volume level below which is considered silence (0-1)
+        "silence_duration": 3,        // Seconds of silence before auto-stopping
+        "max_duration": 300,         // Maximum recording duration in seconds
+    }
+}
+```
+You can adjust these values in your config.json to control when recording automatically stops.
+
+You can run the client from any directory, but the server must be running first.
+
+### Auto-Paste Feature
+On Linux systems, auto-paste requires xdotool:
+```bash
+sudo apt-get install xdotool  # one-time installation
+```
+
+If xdotool is not available, auto-paste will be disabled but copying to clipboard will still work.
+
 
 ## Troubleshooting
 

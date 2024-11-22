@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+
+# Get the absolute path to the project root
+project_root = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(project_root)
+
+# Store project root for other modules to use
+os.environ['SKALD_ROOT'] = project_root
+
+from bin.client import main
+
+if __name__ == "__main__":
+    main() 

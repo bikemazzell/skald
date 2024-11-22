@@ -7,6 +7,9 @@ import pyperclip
 from collections import deque
 import time
 import torch
+import subprocess
+import platform
+import shutil
 
 from validators.config_validator import ConfigValidator
 from utils.config_loader import ConfigLoader
@@ -42,6 +45,15 @@ class AudioTranscriber:
         
         # Check clipboard availability
         self.clipboard_available = self._check_clipboard()
+        
+        # Check for xdotool on Linux
+        self.can_autopaste = False
+        if platform.system() == 'Linux' and self.config["processing"].get("auto_paste", True):
+            if shutil.which('xdotool'):
+                self.can_autopaste = True
+            elif self.config["debug"]["print_status"]:
+                print("Warning: xdotool not found. Auto-paste will be disabled.")
+                print("Install with: sudo apt-get install xdotool")
 
     def _initialize_whisper(self, device, compute_type):
         """Initialize Whisper model"""
@@ -51,7 +63,8 @@ class AudioTranscriber:
                 device=device,
                 compute_type=compute_type
             )
-            print(f"Using device: {device} with compute type: {compute_type}")
+            if self.config["debug"]["print_status"]:
+                print(f"Using device: {device} with compute type: {compute_type}")
         except Exception as e:
             raise RuntimeError(f"Failed to load Whisper model: {e}")
 
@@ -99,67 +112,88 @@ class AudioTranscriber:
             self.silence_counter = 0
             return False
 
+    def _simulate_paste(self):
+        """Simulate paste command based on platform"""
+        if not self.can_autopaste:
+            return
+            
+        try:
+            subprocess.run(['xdotool', 'key', 'ctrl+v'], 
+                         check=True, 
+                         stdout=subprocess.DEVNULL, 
+                         stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            if self.config["debug"]["print_status"]:
+                print("Warning: Failed to auto-paste")
+
     def process_audio(self):
-        """Process audio chunks with Whisper"""
         full_transcription = []
         seen_transcriptions = set()
-        last_processed_text = None
         self._processing_complete = False
+        speech_detected = False  # Add flag to track if any speech was processed
         
         try:
             while self.recording.is_set() or not self.audio_queue.empty():
                 try:
-                    audio_chunk = self.audio_queue.get(timeout=1)
+                    audio_chunk = self.audio_queue.get(timeout=self.config["processing"]["event_wait_timeout"])
                     
-                    # Check if the audio chunk contains any signal
-                    max_abs = np.max(np.abs(audio_chunk))
-                    if max_abs < 1e-10:  # Effectively silent
+                    if np.max(np.abs(audio_chunk)) < self.silence_threshold:
                         continue
-                    
-                    # Normalize non-silent audio
-                    audio_chunk = audio_chunk / max_abs
                     
                     segments, info = self.model.transcribe(
                         audio_chunk,
                         language=self.config["whisper"]["language"],
                         task=self.config["whisper"]["task"],
-                        beam_size=5
+                        beam_size=self.config["whisper"].get("beam_size", 5)
                     )
                     
                     chunk_text = []
                     for segment in segments:
                         if segment.text.strip():
                             chunk_text.append(segment.text.strip())
+                            speech_detected = True  # Set flag when speech is found
                     
                     if chunk_text:
                         combined_text = " ".join(chunk_text)
                         if combined_text not in seen_transcriptions:
                             seen_transcriptions.add(combined_text)
                             full_transcription.append(combined_text)
-                            last_processed_text = combined_text
                     
+                    # Only copy to clipboard, don't paste yet
                     if self.clipboard_available and full_transcription:
                         try:
                             complete_text = " ".join(full_transcription)
                             pyperclip.copy(complete_text)
-                        except Exception:
-                            pass
-                        
+                        except Exception as e:
+                            if self.config["debug"]["print_status"]:
+                                print(f"Clipboard operation failed: {e}")
+                
                 except queue.Empty:
                     continue
-                except Exception:
+                except Exception as e:
+                    if self.config["debug"]["print_status"]:
+                        print(f"Error processing audio: {e}")
                     continue
             
+            # Final output
+            print("\nTranscription:")
             if full_transcription:
                 complete_text = " ".join(full_transcription)
-                print("\nComplete Transcription:")
                 print(complete_text)
                 
                 if self.clipboard_available:
                     try:
                         pyperclip.copy(complete_text)
-                    except Exception:
-                        pass
+                        if self.config["processing"].get("auto_paste", True):
+                            self._simulate_paste()
+                    except Exception as e:
+                        if self.config["debug"]["print_status"]:
+                            print(f"Final clipboard operation failed: {e}")
+            elif self.config["debug"]["print_status"]:
+                if not speech_detected:
+                    print("<No speech detected>")
+                else:
+                    print("Speech detected but transcription failed")
         
         finally:
             self._processing_complete = True
@@ -180,7 +214,7 @@ class AudioTranscriber:
             with sd.InputStream(callback=self.audio_callback,
                               channels=self.config["audio"]["channels"],
                               samplerate=self.sample_rate):
-                print("Recording... (Press Ctrl+C to stop)")
+                print("Recording...")
                 while self.recording.is_set() and (time.time() - start_time) < max_duration:
                     self.recording.wait(timeout=event_wait_timeout)
 
@@ -211,3 +245,12 @@ class AudioTranscriber:
         elif torch.backends.mps.is_available():  # For Apple M1/M2
             return "mps"
         return "cpu"
+
+    def reset_state(self):
+        """Reset transcriber state for new recording without reinitializing model"""
+        self.recording = threading.Event()
+        self.recording.set()
+        self.silence_counter = 0
+        self.audio_queue = queue.Queue()
+        self.audio_buffer.clear()
+        self._processing_complete = False
