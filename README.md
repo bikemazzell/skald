@@ -1,6 +1,8 @@
+```
 ╔═╗╦╔═╔═╗╦  ╔╦╗
 ╚═╗╠╩╗╠═╣║   ║║
 ╚═╝╩ ╩╩ ╩╩═╝═╩╝
+```
 # Skald - Voice to Text Transcriber
 > Created by [@shoewind1997](https://github.com/bikemazzell)
 
