@@ -210,4 +210,6 @@ If you find this project helpful, please consider giving it a star ⭐️
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU Affero General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
+This software is free for non-commercial use. For commercial use, please contact the author.
