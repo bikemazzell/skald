@@ -76,10 +76,23 @@ cp config.json.example config.json
 Example configuration:
 ```json
 {
+    "audio": {
+        "sample_rate": 16000,
+        "silence_threshold": 0.03,
+        "silence_duration": 2,
+        "chunk_duration": 30,
+        "channels": 1,
+        "max_duration": 300,
+        "buffer_size_multiplier": 2
+    },
     "whisper": {
         "model": "base",
         "device": "cpu",
         "compute_type": "int8"
+    },
+    "debug": {
+        "print_status": true,
+        "print_transcriptions": true
     }
 }
 ```
