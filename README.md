@@ -6,8 +6,7 @@
 # Skald - Voice to Text Transcriber
 > Created by [@shoewind1997](https://github.com/bikemazzell)
 
-Skald is a simple, no-UI speech-to-text application that listens to your microphone input and automatically transcribes it to text, copying the result directly to your clipboard. Named after the ancient Nordic poets and storytellers, Skald makes capturing your spoken words as text effortless.
-The idea is to bind the script execution to a hotkey, so you can start and stop the transcription with a single keystroke.
+Skald is a lightweight speech-to-text tool that converts your voice to text in real-time. It runs quietly in the background without any graphical interface, automatically copying transcriptions to your clipboard. The application consists of two parts: a background server that handles the transcription, and a client that can be bound to a hotkey for easy start/stop control. Named after the ancient Nordic poets and storytellers known as skalds, this tool makes it effortless to transform your spoken words into written text with a single keystroke.
 
 ## Privacy & Offline Usage
 
