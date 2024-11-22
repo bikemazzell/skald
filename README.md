@@ -8,6 +8,17 @@
 
 Skald is a lightweight speech-to-text tool that converts your voice to text in real-time. It runs quietly in the background without any graphical interface, automatically copying transcriptions to your clipboard. The application consists of two parts: a background server that handles the transcription, and a client that can be bound to a hotkey for easy start/stop control. Named after the ancient Nordic poets and storytellers known as skalds, this tool makes it effortless to transform your spoken words into written text with a single keystroke.
 
+## Features
+
+- 🎤 Real-time microphone input capture
+- 🤖 Advanced speech recognition using Faster Whisper
+- 📋 Automatic clipboard copying of transcribed text
+- ⏱️ Configurable timeout settings
+- 🛑 Interrupt recording with Ctrl+C
+- 💪 Optional audio cue when recording starts
+- 💪 Multiple whisper models supported (tiny to large-v3)
+- 🎯 Optimized for both CPU and GPU processing
+
 ## Privacy & Offline Usage
 
 Skald is designed with privacy in mind:
@@ -31,17 +42,6 @@ pip install faster-whisper  # not available in conda
 cp config.json.example config.json
 chmod +x skald-server skald-client  # Make scripts executable
 ```
-
-## Features
-
-- 🎤 Real-time microphone input capture
-- 🤖 Advanced speech recognition using Faster Whisper
-- 📋 Automatic clipboard copying of transcribed text
-- ⏱️ Configurable timeout settings
-- 🛑 Interrupt recording with Ctrl+C
-- 💪 Optional audio cue when recording starts
-- 💪 Multiple whisper models supported (tiny to large-v3)
-- 🎯 Optimized for both CPU and GPU processing
 
 ## System Requirements
 
