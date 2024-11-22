@@ -33,7 +33,6 @@ class AudioTranscriber:
         max_buffer_size = int(self.chunk_duration * self.sample_rate * buffer_multiplier)
         self.audio_buffer = deque(maxlen=max_buffer_size)
         
-        self._lock = threading.Lock()
         self.recording = threading.Event()
         self.recording.set()
         self.silence_counter = 0
@@ -57,9 +56,10 @@ class AudioTranscriber:
             raise RuntimeError(f"Failed to load Whisper model: {e}")
 
     def _check_clipboard(self):
-        """Check if clipboard functionality is available"""
         try:
+            original_content = pyperclip.paste()
             pyperclip.copy("test")
+            pyperclip.copy(original_content)  # Restore original content
             return True
         except Exception as e:
             print("Clipboard functionality not available.")
@@ -69,24 +69,26 @@ class AudioTranscriber:
             return False
 
     def audio_callback(self, indata, frames, time, status):
-        """Callback function for audio stream"""
         if status and self.config["debug"]["print_status"]:
             print(f"Status: {status}")
         
-        # Convert to mono if necessary
         audio_data = np.mean(indata, axis=1) if indata.ndim > 1 else indata.copy()
-        
-        # Check for silence
-        if self._check_silence(audio_data):
-            self.recording.clear()
-        
         self.audio_buffer.extend(audio_data)
         
-        # Process chunks when they reach configured duration
-        if len(self.audio_buffer) >= self.chunk_duration * self.sample_rate:
-            chunk = list(self.audio_buffer)[:int(self.chunk_duration * self.sample_rate)]
+        buffer_size = len(self.audio_buffer)
+        chunk_size = int(self.chunk_duration * self.sample_rate)
+        
+        if buffer_size >= chunk_size:
+            chunk = list(self.audio_buffer)[:chunk_size]
             self.audio_queue.put(np.array(chunk))
-            self.audio_buffer.clear()
+            for _ in range(chunk_size):
+                self.audio_buffer.popleft()
+        
+        if self._check_silence(audio_data):
+            if self.audio_buffer:
+                self.audio_queue.put(np.array(list(self.audio_buffer)))
+                self.audio_buffer.clear()
+            self.recording.clear()
 
     def _check_silence(self, audio_data):
         """Check for silence in audio data"""
@@ -99,88 +101,109 @@ class AudioTranscriber:
 
     def process_audio(self):
         """Process audio chunks with Whisper"""
-        full_transcription = []  # Store all transcribed segments
+        full_transcription = []
+        seen_transcriptions = set()
+        last_processed_text = None
+        self._processing_complete = False
         
-        while self.recording.is_set() or not self.audio_queue.empty():
-            try:
-                audio_chunk = self.audio_queue.get(timeout=1)
-                # Normalize audio
-                audio_chunk = audio_chunk / np.max(np.abs(audio_chunk))
-                
-                # Transcribe with Whisper using config settings
-                segments, info = self.model.transcribe(
-                    audio_chunk,
-                    language=self.config["whisper"]["language"],
-                    task=self.config["whisper"]["task"],
-                    beam_size=5
-                )
-                
-                # Handle transcription result
-                for segment in segments:
-                    if segment.text.strip():
-                        transcribed_text = segment.text.strip()
-                        full_transcription.append(transcribed_text)
+        try:
+            while self.recording.is_set() or not self.audio_queue.empty():
+                try:
+                    audio_chunk = self.audio_queue.get(timeout=1)
+                    
+                    # Check if the audio chunk contains any signal
+                    max_abs = np.max(np.abs(audio_chunk))
+                    if max_abs < 1e-10:  # Effectively silent
+                        continue
+                    
+                    # Normalize non-silent audio
+                    audio_chunk = audio_chunk / max_abs
+                    
+                    segments, info = self.model.transcribe(
+                        audio_chunk,
+                        language=self.config["whisper"]["language"],
+                        task=self.config["whisper"]["task"],
+                        beam_size=5
+                    )
+                    
+                    chunk_text = []
+                    for segment in segments:
+                        if segment.text.strip():
+                            chunk_text.append(segment.text.strip())
+                    
+                    if chunk_text:
+                        combined_text = " ".join(chunk_text)
+                        if combined_text not in seen_transcriptions:
+                            seen_transcriptions.add(combined_text)
+                            full_transcription.append(combined_text)
+                            last_processed_text = combined_text
+                    
+                    if self.clipboard_available and full_transcription:
+                        try:
+                            complete_text = " ".join(full_transcription)
+                            pyperclip.copy(complete_text)
+                        except Exception:
+                            pass
                         
-                        if self.config["debug"]["print_transcriptions"]:
-                            print(f"Transcribed: {transcribed_text}")
-                        
-                        # Copy the complete transcription to clipboard
-                        if self.clipboard_available:
-                            try:
-                                complete_text = " ".join(full_transcription)
-                                pyperclip.copy(complete_text)
-                            except Exception as e:
-                                print(f"Failed to copy to clipboard: {e}")
+                except queue.Empty:
+                    continue
+                except Exception:
+                    continue
             
-            except queue.Empty:
-                continue
+            if full_transcription:
+                complete_text = " ".join(full_transcription)
+                print("\nComplete Transcription:")
+                print(complete_text)
+                
+                if self.clipboard_available:
+                    try:
+                        pyperclip.copy(complete_text)
+                    except Exception:
+                        pass
+        
+        finally:
+            self._processing_complete = True
 
     def start_recording(self):
         """Start recording and processing audio"""
         max_duration = self.config["audio"]["max_duration"]
+        shutdown_timeout = self.config["processing"]["shutdown_timeout"]
+        event_wait_timeout = self.config["processing"]["event_wait_timeout"]
         start_time = time.time()
+        processing_thread = None
         
         try:
-            # Play tone before starting recording
             AudioManager.play_start_tone(self.config)
-            
-            # Start processing thread
             processing_thread = threading.Thread(target=self.process_audio)
             processing_thread.start()
 
-            # Start audio stream
             with sd.InputStream(callback=self.audio_callback,
                               channels=self.config["audio"]["channels"],
                               samplerate=self.sample_rate):
                 print("Recording... (Press Ctrl+C to stop)")
                 while self.recording.is_set() and (time.time() - start_time) < max_duration:
-                    sd.sleep(100)
+                    self.recording.wait(timeout=event_wait_timeout)
 
-            # Process remaining audio in buffer
+        except KeyboardInterrupt:
+            self.recording.clear()
             if self.audio_buffer:
                 self.audio_queue.put(np.array(list(self.audio_buffer)))
             
-            # Wait for processing to complete
-            processing_thread.join()
-            
-        except KeyboardInterrupt:
-            print("\nRecording stopped.")
-            self.recording.clear()
-        except sd.PortAudioError as e:
-            raise RuntimeError(f"Audio device error: {e}")
-        except Exception as e:
-            print(f"Error during recording: {e}")
+        finally:
+            if processing_thread and processing_thread.is_alive():
+                processing_thread.join(timeout=shutdown_timeout)
+            self.cleanup()
 
     def cleanup(self):
-        """Cleanup resources"""
+        """Silent cleanup"""
         self.recording.clear()
-        # Clear buffers
-        self.audio_buffer.clear()
-        while not self.audio_queue.empty():
-            try:
-                self.audio_queue.get_nowait()
-            except queue.Empty:
-                break
+        if hasattr(self, '_processing_complete') and self._processing_complete:
+            self.audio_buffer.clear()
+            while not self.audio_queue.empty():
+                try:
+                    self.audio_queue.get_nowait()
+                except queue.Empty:
+                    break
 
     def get_device(self):
         if torch.cuda.is_available():

@@ -1,0 +1,31 @@
+{
+    "version": "0.1",
+    "audio": {
+        "sample_rate": 16000,
+        "silence_threshold": 0.01,
+        "silence_duration": 3,
+        "chunk_duration": 30,
+        "channels": 1,
+        "max_duration": 300,
+        "buffer_size_multiplier": 2,
+        "start_tone": {
+            "enabled": true,
+            "frequency": 440,
+            "duration": 150
+        }
+    },
+    "processing": {
+        "shutdown_timeout": 30,
+        "event_wait_timeout": 0.1
+    },
+    "whisper": {
+        "model": "large",
+        "language": "en",
+        "task": "transcribe",
+        "device": "auto"
+    },
+    "debug": {
+        "print_status": true,
+        "print_transcriptions": true
+    }
+}

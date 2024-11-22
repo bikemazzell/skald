@@ -12,6 +12,7 @@ class ConfigValidator:
                 "buffer_size_multiplier",
                 "start_tone"
             ],
+            "processing": ["shutdown_timeout", "event_wait_timeout"],
             "whisper": ["model", "language", "task"],
             "debug": ["print_status", "print_transcriptions"]
         }
@@ -56,4 +57,10 @@ class ConfigValidator:
                 if not 20 <= tone_config["frequency"] <= 20000:
                     raise ValueError("frequency must be between 20 and 20000 Hz")
                 if not 50 <= tone_config["duration"] <= 1000:
-                    raise ValueError("duration must be between 50 and 1000 ms") 
+                    raise ValueError("duration must be between 50 and 1000 ms")
+        
+        if config["processing"]["shutdown_timeout"] <= 0:
+            raise ValueError("shutdown_timeout must be positive")
+        
+        if config["processing"]["event_wait_timeout"] <= 0:
+            raise ValueError("event_wait_timeout must be positive")

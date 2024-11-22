@@ -26,7 +26,6 @@ class AudioManager:
                           int(sample_rate * tone_config["duration"]/1000))
             tone = np.sin(2 * np.pi * tone_config["frequency"] * t)
             
-            # Prevent clicking with fade in/out
             fade_ms = 5
             fade_len = int(fade_ms * sample_rate / 1000)
             fade_in = np.linspace(0, 1, fade_len)
@@ -35,7 +34,5 @@ class AudioManager:
             tone[-fade_len:] *= fade_out
 
             sd.play(tone, sample_rate, blocking=True)
-            time.sleep(0.05)  # Ensure tone is finished
-
         except Exception as e:
             print(f"Warning: Could not play start tone: {e}") 

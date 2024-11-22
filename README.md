@@ -130,31 +130,59 @@ cp config.json.example config.json
 Example configuration:
 ```json
 {
+    "version": "0.1",
     "audio": {
-        "sample_rate": 16000,
-        "silence_threshold": 0.03,
-        "silence_duration": 2,
-        "chunk_duration": 30,
-        "channels": 1,
-        "max_duration": 300,
-        "buffer_size_multiplier": 2,
+        "sample_rate": 16000,        // Audio sample rate (16000, 32000, 44100, or 48000)
+        "silence_threshold": 0.01,    // Volume level below which is considered silence (0-1)
+        "silence_duration": 3,        // Seconds of silence before stopping
+        "chunk_duration": 30,         // Duration in seconds for each processing chunk
+        "channels": 1,               // Audio channels (1 for mono, 2 for stereo)
+        "max_duration": 300,         // Maximum recording duration in seconds
+        "buffer_size_multiplier": 2,  // Buffer size multiplier for audio processing
         "start_tone": {
-            "enabled": true,
-            "frequency": 440,
-            "duration": 100
+            "enabled": true,          // Play a tone when recording starts
+            "frequency": 440,         // Tone frequency in Hz (20-20000)
+            "duration": 150           // Tone duration in milliseconds (50-1000)
         }
     },
+    "processing": {
+        "shutdown_timeout": 30,       // Maximum seconds to wait for processing to complete
+        "event_wait_timeout": 0.1     // Timeout for event checking in seconds
+    },
     "whisper": {
-        "model": "base",
-        "device": "cpu",
-        "compute_type": "int8"
+        "model": "large",            // Whisper model size (tiny, base, small, medium, large)
+        "language": "en",            // Target language code
+        "task": "transcribe",        // Task type (transcribe or translate)
+        "device": "auto"             // Computing device (auto, cpu, cuda, mps)
     },
     "debug": {
-        "print_status": true,
-        "print_transcriptions": true
+        "print_status": true,        // Print audio device status messages
+        "print_transcriptions": true  // Print transcriptions as they occur
     }
 }
 ```
+
+## Configuration Options
+
+#### Audio Settings
+- `sample_rate`: Higher rates provide better quality but use more resources
+- `silence_threshold`: Lower values are more sensitive to silence
+- `silence_duration`: Longer duration prevents false stops
+- `chunk_duration`: Longer chunks may be more accurate but take longer to process
+- `max_duration`: Prevents infinite recordings
+- `start_tone`: Provides audible feedback when recording begins
+
+#### Processing Settings
+- `shutdown_timeout`: Ensures graceful shutdown with enough time for processing
+- `event_wait_timeout`: Controls responsiveness of the recording loop
+
+#### Whisper Settings
+- `model`: Larger models are more accurate but slower and use more memory
+- `language`: Supports multiple languages (see Whisper documentation)
+- `device`: Auto-detects best available computing device
+
+#### Debug Settings
+Control verbosity of output during operation
 
 ## Model Selection
 

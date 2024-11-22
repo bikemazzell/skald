@@ -22,9 +22,6 @@ def main():
         transcriber.start_recording()
     except Exception as e:
         print(f"Error: {e}")
-    finally:
-        if 'transcriber' in locals():
-            transcriber.cleanup()
 
 if __name__ == "__main__":
     main() 
