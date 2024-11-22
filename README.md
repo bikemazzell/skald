@@ -1,4 +1,3 @@
-```
 ╔═╗╦╔═╔═╗╦  ╔╦╗
 ╚═╗╠╩╗╠═╣║   ║║
 ╚═╝╩ ╩╩ ╩╩═╝═╩╝
@@ -8,6 +7,17 @@
 
 Skald is a simple, no-UI speech-to-text application that listens to your microphone input and automatically transcribes it to text, copying the result directly to your clipboard. Named after the ancient Nordic poets and storytellers, Skald makes capturing your spoken words as text effortless.
 The idea is to bind the script execution to a hotkey, so you can start and stop the transcription with a single keystroke.
+
+## Privacy & Offline Usage
+
+Skald is designed with privacy in mind:
+- 🔒 Completely offline after initial model download
+- 🚫 No data sent to external servers
+- 💻 All processing happens locally on your machine
+- 🗑️ Audio data is processed in memory and not saved to disk
+- 🤖 Uses local AI models for transcription
+
+This makes Skald ideal for transcribing sensitive or confidential information, as your voice data never leaves your computer.
 
 ## Quick Start
 ```bash
