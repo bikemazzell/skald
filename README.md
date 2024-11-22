@@ -1,3 +1,4 @@
+```
 ╔═╗╦╔═╔═╗╦  ╔╦╗
 ╚═╗╠╩╗╠═╣║   ║║
 ╚═╝╩ ╩╩ ╩╩═╝═╩╝
@@ -104,24 +105,41 @@ python -c "import torch; print(torch.cuda.is_available())"  # Should print True
 
 ## Dependencies Installation
 
-### 1. FFmpeg Installation
-#### Windows
+### 1. System Dependencies
+#### FFmpeg Installation
+##### Windows
 ```bash
 winget install FFmpeg
 ```
 
-#### macOS
+##### macOS
 ```bash
 brew install ffmpeg
 ```
 
-#### Linux (Ubuntu/Debian)
+##### Linux (Ubuntu/Debian)
 ```bash
 sudo apt update && sudo apt install ffmpeg
 ```
 
-### 2. Python Environment Setup
+#### Linux-specific Dependencies
+##### Clipboard Support (Required)
+Install either xclip or xsel for clipboard functionality:
+```bash
+sudo apt update && sudo apt install xclip
+# OR
+sudo apt update && sudo apt install xsel
+```
+Note: Without either xclip or xsel, clipboard operations will not work on Linux.
 
+##### Auto-paste Support (Optional)
+Install xdotool for auto-paste functionality:
+```bash
+sudo apt update && sudo apt install xdotool
+```
+Note: If xdotool is not available, auto-paste will be disabled but copying to clipboard will still work (as long as xclip/xsel is installed).
+
+### 2. Python Environment Setup
 Using venv:
 ```bash
 python -m venv venv
