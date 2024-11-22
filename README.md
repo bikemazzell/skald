@@ -38,6 +38,7 @@ python main.py
 - 📋 Automatic clipboard copying of transcribed text
 - ⏱️ Configurable timeout settings
 - 🛑 Interrupt recording with Ctrl+C
+- 💪 Optional audio cue when recording starts
 - 💪 Multiple whisper models supported (tiny to large-v3)
 - 🎯 Optimized for both CPU and GPU processing
 
@@ -94,7 +95,12 @@ Example configuration:
         "chunk_duration": 30,
         "channels": 1,
         "max_duration": 300,
-        "buffer_size_multiplier": 2
+        "buffer_size_multiplier": 2,
+        "start_tone": {
+            "enabled": true,
+            "frequency": 440,
+            "duration": 100
+        }
     },
     "whisper": {
         "model": "base",
@@ -125,11 +131,13 @@ Example configuration:
 python main.py
 ```
 
-2. Speak into your microphone - Skald will listen until:
+2. When you hear the start tone (if enabled), begin speaking into your microphone. Skald will listen until:
    - You press Ctrl+C
    - A configurable silence timeout is reached (default: 2 seconds)
 
 3. The transcribed text will automatically be copied to your clipboard
+
+Note: The start tone can be enabled/disabled and customized in the config.json file. When enabled, it provides an audio cue that the application is ready to record.
 
 ## Troubleshooting
 

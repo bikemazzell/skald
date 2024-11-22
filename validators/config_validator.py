@@ -9,7 +9,8 @@ class ConfigValidator:
                 "chunk_duration", 
                 "channels",
                 "max_duration",
-                "buffer_size_multiplier"
+                "buffer_size_multiplier",
+                "start_tone"
             ],
             "whisper": ["model", "language", "task"],
             "debug": ["print_status", "print_transcriptions"]
@@ -40,4 +41,21 @@ class ConfigValidator:
             raise ValueError("max_duration must be positive")
         
         if config["audio"]["buffer_size_multiplier"] <= 0:
-            raise ValueError("buffer_size_multiplier must be positive") 
+            raise ValueError("buffer_size_multiplier must be positive")
+        
+        # Validate start_tone settings
+        if "start_tone" in config["audio"]:
+            tone_config = config["audio"]["start_tone"]
+            if not isinstance(tone_config, dict):
+                raise ValueError("start_tone must be an object")
+            if "enabled" not in tone_config:
+                raise ValueError("start_tone must have 'enabled' field")
+            if tone_config["enabled"]:
+                if "frequency" not in tone_config:
+                    raise ValueError("start_tone must have 'frequency' when enabled")
+                if "duration" not in tone_config:
+                    raise ValueError("start_tone must have 'duration' when enabled")
+                if not 20 <= tone_config["frequency"] <= 20000:
+                    raise ValueError("frequency must be between 20 and 20000 Hz")
+                if not 50 <= tone_config["duration"] <= 1000:
+                    raise ValueError("duration must be between 50 and 1000 ms") 

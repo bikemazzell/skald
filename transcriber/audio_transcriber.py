@@ -135,6 +135,9 @@ class AudioTranscriber:
         start_time = time.time()
         
         try:
+            # Play tone before starting recording
+            AudioManager.play_start_tone(self.config)
+            
             # Start processing thread
             processing_thread = threading.Thread(target=self.process_audio)
             processing_thread.start()
@@ -159,6 +162,8 @@ class AudioTranscriber:
             self.recording.clear()
         except sd.PortAudioError as e:
             raise RuntimeError(f"Audio device error: {e}")
+        except Exception as e:
+            print(f"Error during recording: {e}")
 
     def cleanup(self):
         """Cleanup resources"""
