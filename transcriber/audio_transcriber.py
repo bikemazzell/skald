@@ -99,6 +99,8 @@ class AudioTranscriber:
 
     def process_audio(self):
         """Process audio chunks with Whisper"""
+        full_transcription = []  # Store all transcribed segments
+        
         while self.recording.is_set() or not self.audio_queue.empty():
             try:
                 audio_chunk = self.audio_queue.get(timeout=1)
@@ -110,22 +112,26 @@ class AudioTranscriber:
                     audio_chunk,
                     language=self.config["whisper"]["language"],
                     task=self.config["whisper"]["task"],
-                    beam_size=5  # Add beam search for better accuracy
+                    beam_size=5
                 )
                 
                 # Handle transcription result
                 for segment in segments:
                     if segment.text.strip():
                         transcribed_text = segment.text.strip()
-                        if self.clipboard_available:
-                            try:
-                                pyperclip.copy(transcribed_text)
-                            except Exception as e:
-                                print(f"Failed to copy to clipboard: {e}")
+                        full_transcription.append(transcribed_text)
                         
                         if self.config["debug"]["print_transcriptions"]:
                             print(f"Transcribed: {transcribed_text}")
-                
+                        
+                        # Copy the complete transcription to clipboard
+                        if self.clipboard_available:
+                            try:
+                                complete_text = " ".join(full_transcription)
+                                pyperclip.copy(complete_text)
+                            except Exception as e:
+                                print(f"Failed to copy to clipboard: {e}")
+            
             except queue.Empty:
                 continue
 
