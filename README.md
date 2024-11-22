@@ -54,6 +54,36 @@ python main.py
 - CUDA-compatible GPU (for faster processing)
 - 8GB+ RAM (for larger models)
 
+### GPU Support (Optional)
+
+If you want to use GPU acceleration:
+
+1. Install CUDA and cuDNN:
+```bash
+# Using conda (recommended)
+conda install -c conda-forge cudnn --solver=classic
+
+# Or using pip (alternative)
+pip install nvidia-cudnn-cu11
+```
+
+2. Update config.json to use GPU:
+```json
+{
+    "whisper": {
+        "model": "base",
+        "device": "cuda",
+        "compute_type": "float16"
+    }
+}
+```
+
+Note: If GPU setup fails, Skald will automatically fall back to CPU processing. You can verify your GPU setup with:
+```bash
+nvidia-smi  # Should show GPU info
+python -c "import torch; print(torch.cuda.is_available())"  # Should print True
+```
+
 ## Dependencies Installation
 
 ### 1. FFmpeg Installation
@@ -73,10 +103,22 @@ sudo apt update && sudo apt install ffmpeg
 ```
 
 ### 2. Python Environment Setup
+
+Using venv:
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
+```
+
+Or using conda:
+```bash
+conda create -n skald python=3.8
+conda activate skald
+conda install sounddevice
+conda install -c conda-forge faster-whisper
+conda install pytorch torchvision torchaudio -c pytorch
+conda install numpy scipy pyperclip
 ```
 
 ### 3. Configuration

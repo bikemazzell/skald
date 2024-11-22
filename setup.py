@@ -8,9 +8,9 @@ setup(
         'faster-whisper>=0.10.0',
         'torch>=2.0.0',
         'numpy>=1.20.0',
-        'pyperclip',
-        'scipy',
-        'sounddevice'
+        'pyperclip>=1.8.2',
+        'scipy>=1.7.0',
+        'sounddevice>=0.4.6'
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.8',
 ) 
