@@ -114,15 +114,40 @@ class AudioTranscriber:
 
     def _simulate_paste(self):
         """Simulate paste command based on platform"""
+        print("\nDebug auto-paste:")
+        print(f"Can auto-paste: {self.can_autopaste}")
+        print(f"Auto-paste enabled in config: {self.config['processing'].get('auto_paste', True)}")
+        
         if not self.can_autopaste:
+            print("Auto-paste disabled - paste tool not available")
             return
             
         try:
-            subprocess.run(['xdotool', 'key', 'ctrl+v'], 
-                         check=True, 
-                         stdout=subprocess.DEVNULL, 
-                         stderr=subprocess.DEVNULL)
-        except subprocess.CalledProcessError:
+            print("Attempting to simulate Ctrl+V...")
+            # Try ydotool first
+            if shutil.which('ydotool'):
+                result = subprocess.run(['ydotool', 'key', '29:1', '47:1', '47:0', '29:0'], 
+                             check=True, 
+                             stdout=subprocess.DEVNULL, 
+                             stderr=subprocess.PIPE,
+                             text=True)
+            # Try wtype as fallback
+            elif shutil.which('wtype'):
+                result = subprocess.run(['wtype', '-M', 'ctrl', '-P', 'v', '-m', 'ctrl'], 
+                             check=True, 
+                             stdout=subprocess.DEVNULL, 
+                             stderr=subprocess.PIPE,
+                             text=True)
+            else:
+                # Fallback to xdotool for X11
+                result = subprocess.run(['xdotool', 'key', 'ctrl+v'], 
+                             check=True, 
+                             stdout=subprocess.DEVNULL, 
+                             stderr=subprocess.PIPE,
+                             text=True)
+            print("Auto-paste command completed successfully")
+        except subprocess.CalledProcessError as e:
+            print(f"Warning: Failed to auto-paste. Error: {e.stderr}")
             if self.config["debug"]["print_status"]:
                 print("Warning: Failed to auto-paste")
 

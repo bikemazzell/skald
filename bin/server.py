@@ -31,11 +31,11 @@ def display_startup_message():
     config = ConfigLoader.load_config("config.json")
     version = config.get("version", "1.0")
     print(f"""
-╔═══════════════════════════════════╗
-║ 👄   Skald (STT Transcriber)   🎙️  ║
-║      Created by @shoewind1997     ║
-║ 👂     Version {version:<6}          📝 ║
-╚═══════════════════════════════════╝
+═══════════════════════════════════
+👄    Skald (STT Transcriber)    🎙️ 
+      Created by @shoewind1997     
+👂     Version {version:<6}      📝 
+═══════════════════════════════════
     """)
 
 def run_server():
