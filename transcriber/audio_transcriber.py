@@ -17,35 +17,40 @@ from utils.device_manager import DeviceManager
 from utils.audio_manager import AudioManager
 
 class AudioTranscriber:
-    def __init__(self, config_path="config.json"):
-        self.config = ConfigLoader.load_config(config_path)
+    def __init__(self, config_path="config.json", config=None):
+        # Allow direct config object for testing
+        if config is not None:
+            self.config = config
+        else:
+            self.config = ConfigLoader.load_config(config_path)
+
         ConfigValidator.validate_config(self.config)
-        
+
         # Initialize managers
         AudioManager.initialize_audio()
         device, compute_type = DeviceManager.get_device_and_compute_type()
-        
+
         # Initialize from config
         self.sample_rate = self.config["audio"]["sample_rate"]
         self.silence_threshold = self.config["audio"]["silence_threshold"]
         self.silence_duration = self.config["audio"]["silence_duration"]
         self.chunk_duration = self.config["audio"]["chunk_duration"]
-        
+
         # Calculate buffer size based on config
         buffer_multiplier = self.config["audio"]["buffer_size_multiplier"]
         max_buffer_size = int(self.chunk_duration * self.sample_rate * buffer_multiplier)
         self.audio_buffer = deque(maxlen=max_buffer_size)
-        
+
         self.recording = threading.Event()
         self.recording.set()
         self.silence_counter = 0
         self.audio_queue = queue.Queue()
-        
+
         self._initialize_whisper(device, compute_type)
-        
+
         # Check clipboard availability
         self.clipboard_available = self._check_clipboard()
-        
+
         # Check for xdotool on Linux
         self.can_autopaste = False
         if platform.system() == 'Linux' and self.config["processing"].get("auto_paste", True):
@@ -84,19 +89,19 @@ class AudioTranscriber:
     def audio_callback(self, indata, frames, time, status):
         if status and self.config["debug"]["print_status"]:
             print(f"Status: {status}")
-        
+
         audio_data = np.mean(indata, axis=1) if indata.ndim > 1 else indata.copy()
         self.audio_buffer.extend(audio_data)
-        
+
         buffer_size = len(self.audio_buffer)
         chunk_size = int(self.chunk_duration * self.sample_rate)
-        
+
         if buffer_size >= chunk_size:
             chunk = list(self.audio_buffer)[:chunk_size]
             self.audio_queue.put(np.array(chunk))
             for _ in range(chunk_size):
                 self.audio_buffer.popleft()
-        
+
         if self._check_silence(audio_data):
             if self.audio_buffer:
                 self.audio_queue.put(np.array(list(self.audio_buffer)))
@@ -117,32 +122,32 @@ class AudioTranscriber:
         print("\nDebug auto-paste:")
         print(f"Can auto-paste: {self.can_autopaste}")
         print(f"Auto-paste enabled in config: {self.config['processing'].get('auto_paste', True)}")
-        
+
         if not self.can_autopaste:
             print("Auto-paste disabled - paste tool not available")
             return
-            
+
         try:
             print("Attempting to simulate Ctrl+V...")
             # Try ydotool first
             if shutil.which('ydotool'):
-                result = subprocess.run(['ydotool', 'key', '29:1', '47:1', '47:0', '29:0'], 
-                             check=True, 
-                             stdout=subprocess.DEVNULL, 
+                result = subprocess.run(['ydotool', 'key', '29:1', '47:1', '47:0', '29:0'],
+                             check=True,
+                             stdout=subprocess.DEVNULL,
                              stderr=subprocess.PIPE,
                              text=True)
             # Try wtype as fallback
             elif shutil.which('wtype'):
-                result = subprocess.run(['wtype', '-M', 'ctrl', '-P', 'v', '-m', 'ctrl'], 
-                             check=True, 
-                             stdout=subprocess.DEVNULL, 
+                result = subprocess.run(['wtype', '-M', 'ctrl', '-P', 'v', '-m', 'ctrl'],
+                             check=True,
+                             stdout=subprocess.DEVNULL,
                              stderr=subprocess.PIPE,
                              text=True)
             else:
                 # Fallback to xdotool for X11
-                result = subprocess.run(['xdotool', 'key', 'ctrl+v'], 
-                             check=True, 
-                             stdout=subprocess.DEVNULL, 
+                result = subprocess.run(['xdotool', 'key', 'ctrl+v'],
+                             check=True,
+                             stdout=subprocess.DEVNULL,
                              stderr=subprocess.PIPE,
                              text=True)
             print("Auto-paste command completed successfully")
@@ -156,34 +161,34 @@ class AudioTranscriber:
         seen_transcriptions = set()
         self._processing_complete = False
         speech_detected = False  # Add flag to track if any speech was processed
-        
+
         try:
             while self.recording.is_set() or not self.audio_queue.empty():
                 try:
                     audio_chunk = self.audio_queue.get(timeout=self.config["processing"]["event_wait_timeout"])
-                    
+
                     if np.max(np.abs(audio_chunk)) < self.silence_threshold:
                         continue
-                    
+
                     segments, info = self.model.transcribe(
                         audio_chunk,
                         language=self.config["whisper"]["language"],
                         task=self.config["whisper"]["task"],
                         beam_size=self.config["whisper"].get("beam_size", 5)
                     )
-                    
+
                     chunk_text = []
                     for segment in segments:
                         if segment.text.strip():
                             chunk_text.append(segment.text.strip())
                             speech_detected = True  # Set flag when speech is found
-                    
+
                     if chunk_text:
                         combined_text = " ".join(chunk_text)
                         if combined_text not in seen_transcriptions:
                             seen_transcriptions.add(combined_text)
                             full_transcription.append(combined_text)
-                    
+
                     # Only copy to clipboard, don't paste yet
                     if self.clipboard_available and full_transcription:
                         try:
@@ -192,20 +197,20 @@ class AudioTranscriber:
                         except Exception as e:
                             if self.config["debug"]["print_status"]:
                                 print(f"Clipboard operation failed: {e}")
-                
+
                 except queue.Empty:
                     continue
                 except Exception as e:
                     if self.config["debug"]["print_status"]:
                         print(f"Error processing audio: {e}")
                     continue
-            
+
             # Final output
             print("\nTranscription:")
             if full_transcription:
                 complete_text = " ".join(full_transcription)
                 print(complete_text)
-                
+
                 if self.clipboard_available:
                     try:
                         pyperclip.copy(complete_text)
@@ -219,7 +224,7 @@ class AudioTranscriber:
                     print("<No speech detected>")
                 else:
                     print("Speech detected but transcription failed")
-        
+
         finally:
             self._processing_complete = True
 
@@ -230,7 +235,7 @@ class AudioTranscriber:
         event_wait_timeout = self.config["processing"]["event_wait_timeout"]
         start_time = time.time()
         processing_thread = None
-        
+
         try:
             AudioManager.play_start_tone(self.config)
             processing_thread = threading.Thread(target=self.process_audio)
@@ -247,7 +252,7 @@ class AudioTranscriber:
             self.recording.clear()
             if self.audio_buffer:
                 self.audio_queue.put(np.array(list(self.audio_buffer)))
-            
+
         finally:
             if processing_thread and processing_thread.is_alive():
                 processing_thread.join(timeout=shutdown_timeout)

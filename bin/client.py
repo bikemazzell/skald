@@ -16,14 +16,20 @@ def send_command(action):
             response = json.loads(sock.recv(1024).decode())
             if "status" not in response:
                 print("Error: Invalid response from server")
-                return
+                sys.exit(1)
             print(response["status"])
     except socket.timeout:
         print("Error: Server not responding")
+        sys.exit(1)
     except FileNotFoundError:
         print("Error: Server not running. Start it with './skald-server'")
+        sys.exit(1)
     except ConnectionRefusedError:
         print("Error: Could not connect to server")
+        sys.exit(1)
+    except json.JSONDecodeError:
+        print("Error: Invalid JSON response from server")
+        sys.exit(1)
 
 def main():
     if len(sys.argv) != 2 or sys.argv[1] not in ["start", "stop"]:
@@ -32,4 +38,4 @@ def main():
     send_command(sys.argv[1])
 
 if __name__ == "__main__":
-    main() 
+    main()
